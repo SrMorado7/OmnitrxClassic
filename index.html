@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Omnitrix — Dial interactivo</title>
+<style>
+/* Estilos principales de la interfaz */
+
+:root {
+  --glow:#89ff1a;
+  --glow-rgb:137,255,26;
+  --panel:rgba(9,17,12,.86);
+  --text:#eef8ef;
+  --muted:#9daaa0
+}
+
+* {
+  box-sizing:border-box
+}
+
+html,body {
+  margin:0;
+  min-height:100%;
+  background:#020403;
+  color:var(--text);
+  font-family:Inter,Segoe UI,system-ui,sans-serif
+}
+
+body {
+  overflow-x:hidden;
+  background:radial-gradient(ellipse at 50% 43%,rgba(var(--glow-rgb),.07),transparent 37%),#020403;
+  transition:background .35s
+}
+
+body:before {
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  background:radial-gradient(ellipse at center,transparent 35%,rgba(0,0,0,.78) 100%);
+  z-index:0
+}
+
+.app {
+  position:relative;
+  z-index:1;
+  min-height:100svh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:22px 16px 28px;
+  gap:14px
+}
+
+header {
+  width:min(1100px,100%);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px
+}
+
+.brand {
+  font-size:12px;
+  letter-spacing:.24em;
+  text-transform:uppercase;
+  color:var(--muted)
+}
+
+.brand strong {
+  color:var(--glow);
+  font-weight:800
+}
+
+.status {
+  font-size:11px;
+  letter-spacing:.1em;
+  color:var(--glow);
+  border:1px solid rgba(var(--glow-rgb),.35);
+  border-radius:999px;
+  padding:7px 11px;
+  background:rgba(var(--glow-rgb),.06)
+}
+
+.stage {
+  width:min(94vw, 1100px, calc((100svh - 280px) * 1.78865));
+  min-width:280px;
+  aspect-ratio:1261 / 705;
+  position:relative;
+  display:grid;
+  place-items:center;
+  isolation:isolate;
+  flex:none;
+  filter:drop-shadow(0 0 30px rgba(var(--glow-rgb),.12))
+}
+
+.stage:before {
+  content:"";
+  position:absolute;
+  inset:12%;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(var(--glow-rgb),.18) 0%,rgba(var(--glow-rgb),.075) 35%,transparent 70%);
+  filter:blur(24px);
+  z-index:-2;
+  transform:scale(1.12)
+}
+
+.layer {
+  position:absolute;
+  width:100%;
+  height:100%;
+  inset:0;
+  object-fit:contain;
+  user-select:none;
+  -webkit-user-drag:none;
+  pointer-events:none
+}
+
+.base {
+  z-index:1;
+  filter:drop-shadow(0 0 8px rgba(var(--glow-rgb),.17))
+}
+
+.rotor {
+  z-index:2;
+  transform:rotate(var(--angle,0deg));
+  transition:transform .48s cubic-bezier(.2,.8,.2,1);
+  filter:drop-shadow(0 0 7px rgba(var(--glow-rgb),.45)) drop-shadow(0 0 20px rgba(var(--glow-rgb),.22))
+}
+
+.alien-window {
+  position:absolute;
+  z-index:3;
+  width:27%;
+  height:68%;
+  left:36.5%;
+  top:16%;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);
+  pointer-events:none
+}
+
+.alien {
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  object-position:center center;
+  opacity:.82;
+  filter:brightness(0) drop-shadow(0 0 5px rgba(var(--glow-rgb),.25));
+  transition:opacity .18s,filter .25s;
+  transform:scale(1.8);
+  transform-origin:center center;
+  will-change:transform
+}
+
+.alien.missing {
+  display:none
+}
+
+.placeholder {
+  width:100%;
+  height:100%;
+  display:grid;
+  place-items:center;
+  text-align:center;
+  color:rgba(var(--glow-rgb),.7);
+  font-size:10px;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  text-shadow:0 0 12px rgba(var(--glow-rgb),.5);
+  padding:8px
+}
+
+.placeholder span {
+  display:block;
+  font-size:clamp(24px,4vw,48px);
+  font-weight:800;
+  letter-spacing:.04em;
+  color:rgba(var(--glow-rgb),.2)
+}
+
+.readout {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  min-height:34px;
+  text-align:center
+}
+
+.readout .name {
+  font-weight:750;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  font-size:13px
+}
+
+.readout .count {
+  font-size:11px;
+  color:var(--muted);
+  letter-spacing:.12em
+}
+
+.controls {
+  width:min(820px,100%);
+  display:flex;
+  flex-direction:column;
+  gap:10px
+}
+
+.toolbar {
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:8px
+}
+
+.btn,select {
+  appearance:none;
+  color:var(--text);
+  background:var(--panel);
+  border:1px solid rgba(var(--glow-rgb),.27);
+  border-radius:10px;
+  padding:11px 14px;
+  font:inherit;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.045em;
+  cursor:pointer;
+  transition:background .2s,border-color .2s,transform .15s
+}
+
+.btn:hover,select:hover {
+  background:rgba(var(--glow-rgb),.12);
+  border-color:rgba(var(--glow-rgb),.7)
+}
+
+.btn:active {
+  transform:scale(.97)
+}
+
+.btn.primary {
+  background:rgba(var(--glow-rgb),.13);
+  border-color:rgba(var(--glow-rgb),.58)
+}
+
+.btn.icon {
+  font-size:18px;
+  min-width:46px;
+  padding:7px 13px
+}
+
+.btn.active {
+  background:var(--glow);
+  color:#061007;
+  border-color:var(--glow)
+}
+
+.color-btn[data-color="green"] {
+  --local:#89ff1a
+}
+
+.color-btn[data-color="purple"] {
+  --local:#cb79ff
+}
+
+.color-btn.selected {
+  border-color:var(--local);
+  box-shadow:inset 0 0 0 1px var(--local);
+  color:var(--local)
+}
+
+.panel {
+  display:none;
+  width:min(700px,100%);
+  padding:15px;
+  border:1px solid rgba(var(--glow-rgb),.22);
+  border-radius:14px;
+  background:rgba(4,9,6,.88);
+  box-shadow:0 10px 40px #0008
+}
+
+.panel.open {
+  display:block
+}
+
+.panel h2 {
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.17em;
+  margin:0 0 12px
+}
+
+.panel p {
+  font-size:12px;
+  color:var(--muted);
+  line-height:1.5;
+  margin:8px 0 12px
+}
+
+.free-controls {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px
+}
+
+.field {
+  display:flex;
+  flex-direction:column;
+  gap:7px
+}
+
+.field label {
+  font-size:11px;
+  color:var(--muted);
+  letter-spacing:.08em;
+  text-transform:uppercase
+}
+
+.field select {
+  width:100%
+}
+
+.alien-options {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(145px,1fr));
+  gap:7px;
+  max-height:230px;
+  overflow:auto;
+  padding:2px
+}
+
+.alien-option {
+  display:flex;
+  gap:8px;
+  align-items:center;
+  border:1px solid #ffffff14;
+  border-radius:8px;
+  padding:8px;
+  font-size:12px;
+  background:#ffffff04
+}
+
+.alien-option input {
+  accent-color:var(--glow)
+}
+
+.panel-footer {
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  align-items:center;
+  margin-top:12px;
+  flex-wrap:wrap
+}
+
+.hint {
+  font-size:11px;
+  color:var(--muted);
+  text-align:center;
+  max-width:650px;
+  line-height:1.5
+}
+
+.fullscreen .app {
+  min-height:100svh;
+  padding:0;
+  justify-content:center
+}
+
+.fullscreen header,.fullscreen .controls,.fullscreen .readout,.fullscreen .hint {
+  display:none
+}
+
+.fullscreen .stage {
+  width:min(96vw, 96svh * 1.78865);
+  min-width:0
+}
+
+.fullscreen .app {
+  gap:0
+}
+
+.fullscreen-exit {
+  display:none;
+  position:fixed;
+  right:14px;
+  top:14px;
+  z-index:20;
+  background:#0008;
+  border:1px solid #ffffff25;
+  color:white;
+  border-radius:8px;
+  padding:8px 11px;
+  font-size:11px
+}
+
+.fullscreen .fullscreen-exit {
+  display:block
+}@media(max-width:600px){
+
+.app {
+  padding:14px 10px 20px
+}
+
+.stage {
+  width:min(96vw,calc((100svh - 310px) * 1.78865));
+  min-width:260px
+}
+
+.btn {
+  padding:10px 11px
+}
+
+.free-controls {
+  grid-template-columns:1fr
+}
+
+.brand {
+  font-size:10px
+}
+
+.controls {
+  gap:8px
+}}@media(prefers-reduced-motion:reduce){
+
+*,*:before,*:after {
+  transition:none!important
+}}
+</style>
+</head>
+<body>
+<main class="app" id="app">
+
+<section class="stage" id="stage" aria-label="Dial interactivo">
+  <img class="layer base" id="baseImage" src="assets/Base.png" alt="Base fija del dial">
+  <img class="layer rotor" id="dialImage" src="assets/Dial.png" alt="Aro giratorio del dial">
+  <div class="alien-window"><img class="alien missing" id="alienImage" alt="" draggable="false"><div class="placeholder" id="placeholder"><div><span>OMNI</span>ALIEN NO DISPONIBLE</div></div></div>
+</section>
+<div class="readout"><span class="name" id="alienName">4 brazos</span><span class="count" id="alienCount">01 / 20</span></div>
+<section class="controls" id="controls">
+ <div class="toolbar">
+  <button class="btn icon" id="prevBtn" title="Alien anterior" aria-label="Alien anterior">◀</button><button class="btn icon primary" id="nextBtn" title="Siguiente alien" aria-label="Siguiente alien">▶</button>
+  <button class="btn" id="autoBtn">▶ AUTO</button><button class="btn" id="fullscreenBtn">⛶ PANTALLA COMPLETA</button>
+ </div>
+ <div class="toolbar"><button class="btn color-btn selected" data-color="green">● VERDE</button><button class="btn color-btn" data-color="purple">● MORADO</button><button class="btn" id="freeBtn">☷ MODO LIBRE</button></div>
+ <div class="panel" id="freePanel"><h2>Configurar modo libre</h2><div class="free-controls"><div class="field"><label for="freeColor">Tono de iluminación</label><select id="freeColor"><option value="green">Verde</option><option value="purple">Morado</option></select></div><div class="field"><label for="orderSelect">Orden de la lista</label><select id="orderSelect"><option value="selected">Orden de selección</option><option value="catalog">Orden del catálogo</option></select></div></div><p>Selecciona entre 3 y 10 aliens. El modo libre conserva el orden elegido y recorre únicamente esa lista.</p><div class="alien-options" id="alienOptions"></div><div class="panel-footer"><span class="count" id="selectionCount">0 / 10 seleccionados</span><div class="toolbar"><button class="btn" id="cancelFreeBtn">CANCELAR</button><button class="btn primary" id="applyFreeBtn">APLICAR LISTA</button></div></div></div>
+</section>
+
+</main>
+<button class="fullscreen-exit" id="exitFullscreen">ESC · SALIR</button>
+<script>
+// Catálogo y configuración del Omnitrix
+const CATALOG=['4 brazos','Acuatico','Ben Victor','Benlobo','Benmomia','Bestia','Canonbolt','Diamante','Ditto','EON','Fantasmatico','Feedback','Fuego','Gray Matter','Insectoide','Multiojos','MuyGrande','Ultra-T','Upchuck','Wildvine','XLR8'];
+const GREEN_LIST=CATALOG.filter(n=>n!=='EON');
+const PURPLE_LIST=[...CATALOG];
+const COLORS={green:{hex:'#89ff1a',rgb:'137,255,26',label:'VERDE'},purple:{hex:'#cb79ff',rgb:'203,121,255',label:'MORADO'}};
+let color='green',mode='normal',index=0,autoTimer=null,freeList=[],freeOrder=[],selectedSet=new Set(),rotation=0;
+const $=id=>document.getElementById(id);
+function list(){if(mode==='free')return freeList;return color==='purple'?PURPLE_LIST:GREEN_LIST}
+function setColor(next){color=next;const c=COLORS[color];document.documentElement.style.setProperty('--glow',c.hex);document.documentElement.style.setProperty('--glow-rgb',c.rgb);document.querySelectorAll('.color-btn').forEach(b=>b.classList.toggle('selected',b.dataset.color===color));$('freeColor').value=color;if(mode==='normal')index=Math.min(index,list().length-1);update()}
+function update(){const arr=list();if(!arr.length)return;index=(index%arr.length+arr.length)%arr.length;const name=arr[index];$('dialImage').src=color==='purple'?'assets/Dial32.png':'assets/Dial.png';$('alienName').textContent=name;$('alienCount').textContent=String(index+1).padStart(2,'0')+' / '+String(arr.length).padStart(2,'0');
+ $('dialImage').style.setProperty('--angle',rotation+'deg');
+ const file='assets/iconos/'+name+'.png';const img=$('alienImage');img.onload=()=>{img.classList.remove('missing');$('placeholder').style.display='none'};img.onerror=()=>{img.classList.add('missing');$('placeholder').style.display='grid';$('placeholder').innerHTML='<div><span>OMNI</span>FALTA '+escapeHtml(file)+'</div>'};img.src=file;
+ }
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function step(delta){const arr=list();if(!arr.length)return;rotation-=delta*45;index=(index+delta+arr.length)%arr.length;update()}
+$('prevBtn').addEventListener('click',()=>step(-1));$('nextBtn').addEventListener('click',()=>step(1));
+document.querySelectorAll('.color-btn').forEach(b=>b.addEventListener('click',()=>{stopAuto();mode='normal';setColor(b.dataset.color)}));
+function stopAuto(){if(autoTimer){clearInterval(autoTimer);autoTimer=null}$('autoBtn').textContent='▶ AUTO';$('autoBtn').classList.remove('active')}
+$('autoBtn').addEventListener('click',()=>{if(autoTimer){stopAuto();return}autoTimer=setInterval(()=>step(1),1450);$('autoBtn').textContent='■ STOP';$('autoBtn').classList.add('active')});
+function toggleFullscreen(){if(!document.fullscreenElement){document.documentElement.requestFullscreen?.().catch(()=>{});document.body.classList.add('fullscreen')}else{document.exitFullscreen?.();document.body.classList.remove('fullscreen')}}
+$('fullscreenBtn').addEventListener('click',toggleFullscreen);$('exitFullscreen').addEventListener('click',toggleFullscreen);document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement)document.body.classList.remove('fullscreen')});
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowUp'){e.preventDefault();step(1)}if(e.key==='ArrowLeft'||e.key==='ArrowDown'){e.preventDefault();step(-1)}if(e.key==='Escape')document.body.classList.remove('fullscreen')});
+let wheelLock = false;
+document.addEventListener('wheel', event => {
+  event.preventDefault();
+  if (wheelLock || event.deltaY === 0) return;
+  wheelLock = true;
+  step(event.deltaY > 0 ? 1 : -1);
+  setTimeout(() => { wheelLock = false; }, 180);
+}, { passive: false });
+function renderOptions(){const box=$('alienOptions');box.innerHTML='';const available=$('freeColor').value==='purple'?CATALOG:GREEN_LIST;if($('freeColor').value==='green')selectedSet.delete('EON');available.forEach(name=>{const label=document.createElement('label');label.className='alien-option';const input=document.createElement('input');input.type='checkbox';input.value=name;input.checked=selectedSet.has(name);input.addEventListener('change',()=>{if(input.checked){if(selectedSet.size>=10){input.checked=false;return}selectedSet.add(name)}else selectedSet.delete(name);updateSelectionCount()});const span=document.createElement('span');span.textContent=name+(name==='EON'?' · exclusivo morado':'');label.append(input,span);box.append(label)});updateSelectionCount()}
+function updateSelectionCount(){$('selectionCount').textContent=selectedSet.size+' / 10 seleccionados';$('applyFreeBtn').disabled=selectedSet.size<3||selectedSet.size>10;$('applyFreeBtn').style.opacity=$('applyFreeBtn').disabled?'.45':'1'}
+$('freeBtn').addEventListener('click',()=>{stopAuto();selectedSet=new Set(freeList.length?freeList:[]);renderOptions();$('freePanel').classList.toggle('open')});$('freeColor').addEventListener('change',()=>renderOptions());$('cancelFreeBtn').addEventListener('click',()=>$('freePanel').classList.remove('open'));
+$('applyFreeBtn').addEventListener('click',()=>{if(selectedSet.size<3||selectedSet.size>10)return;const order=$('orderSelect').value;freeList=order==='catalog'?CATALOG.filter(n=>selectedSet.has(n)):[...selectedSet];color=$('freeColor').value;document.documentElement.style.setProperty('--glow',COLORS[color].hex);document.documentElement.style.setProperty('--glow-rgb',COLORS[color].rgb);document.querySelectorAll('.color-btn').forEach(b=>b.classList.toggle('selected',b.dataset.color===color));mode='free';index=0;$('freePanel').classList.remove('open');update()});
+update();
+</script></body></html>
